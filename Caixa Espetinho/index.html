@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Caixa - Espetinho da Cléo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="menu-header">
+      <h1>Espetinho</h1>
+      <button class="btn-toggle" id="btnToggle">&#9776;</button>
+    </div>
+    <ul class="menu-list">
+      <li><button class="menu-btn active" data-target="produtos">📦 Produtos</button></li>
+      <li><button class="menu-btn" data-target="caixa">💰 Caixa</button></li>
+      <li><button class="menu-btn" data-target="relatorio">📊 Relatório</button></li>
+    </ul>
+  </nav>
+
+  <main class="main-content">
+    <section id="produtos" class="sessao ativa">
+      <h2>Espetinhos</h2>
+      <div class="produto">
+        <span>Espetinho de Carne - R$ 6,00</span>
+        <button data-nome="Espetinho de Carne" data-preco="6" onclick="adicionarItem('Espetinho de Carne', 6)">Adicionar</button>
+      </div>
+      <div class="produto">
+        <span>Espetinho de Frango - R$ 5,00</span>
+        <button data-nome="Espetinho de Frango" data-preco="5" onclick="adicionarItem('Espetinho de Frango', 5)">Adicionar</button>
+      </div>
+      <div class="produto">
+        <span>Espetinho de Queijo - R$ 7,00</span>
+        <button data-nome="Espetinho de Queijo" data-preco="7" onclick="adicionarItem('Espetinho de Queijo', 7)">Adicionar</button>
+      </div>
+      <h2>Bebidas</h2>
+      <div class="produto">
+        <span>Refrigerante Lata - R$ 5,00</span>
+        <button data-nome="Refrigerante Lata" data-preco="5" onclick="adicionarItem('Refrigerante Lata', 5)">Adicionar</button>
+      </div>
+      <div class="produto">
+        <span>Cerveja Lata - R$ 6,00</span>
+        <button data-nome="Cerveja Lata" data-preco="6" onclick="adicionarItem('Cerveja Lata', 6)">Adicionar</button>
+      </div>
+      <div class="produto">
+        <span>Água Mineral - R$ 3,00</span>
+        <button data-nome="Água Mineral" data-preco="3" onclick="adicionarItem('Água Mineral', 3)">Adicionar</button>
+      </div>
+    </section>
+
+    <section id="caixa" class="sessao">
+      <h2>Carrinho</h2>
+      <div id="itensCarrinho"></div>
+      <div class="total" id="total">Total: R$ 0,00</div>
+
+      <div class="cliente-info">
+        <label for="nomeCliente">Nome do cliente:</label>
+        <input type="text" id="nomeCliente" placeholder="Ex: João" />
+      </div>
+
+      <div class="pagamento">
+        <label for="valorRecebido">Valor recebido:</label>
+        <input type="number" id="valorRecebido" placeholder="Digite o valor" step="0.01" />
+        <div id="troco">Troco: R$ 0,00</div>
+      </div>
+
+      <button class="finalizar" onclick="finalizarVenda()">Finalizar Venda</button>
+    </section>
+
+    <section id="relatorio" class="sessao">
+      <h2>Relatório do Dia</h2>
+      <button class="fechar-caixa" onclick="fecharCaixa()">Fechar Caixa</button>
+      <div id="relatorioVendas"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
