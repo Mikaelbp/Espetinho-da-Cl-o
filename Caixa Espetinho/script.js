@@ -1,223 +1,202 @@
-let carrinho = [];
+let estoque = {
+  "Espetinho de Carne": 10,
+  "Espetinho de Frango": 10,
+  "Espetinho de Queijo": 10,
+  "Refrigerante Lata": 10,
+  "Cerveja Lata": 10,
+  "Água Mineral": 10
+};
 
-function contarItens() {
-  const contagem = {};
-  carrinho.forEach(item => {
-    contagem[item.nome] = (contagem[item.nome] || 0) + 1;
-  });
-  return contagem;
+let comanda = {};
+let vendas = JSON.parse(localStorage.getItem('vendas')) || [];
+
+// Adicionar item à comanda
+function adicionarComandaMesa(nome, preco) {
+  const mesa = document.getElementById('mesaSelecionada').value;
+  if (!mesa) return alert("Informe o número da mesa!");
+  if (estoque[nome] <= 0) return alert("Produto sem estoque!");
+  if (!comanda[mesa]) comanda[mesa] = [];
+  comanda[mesa].push({ nome, preco });
+  estoque[nome]--;
+  atualizarComanda();
+  atualizarEstoque();
 }
 
-function atualizarQuantidadeProdutos() {
-  const contagem = contarItens();
-  document.querySelectorAll('#produtos .produto').forEach(div => {
-    const btn = div.querySelector('button');
-    const nome = btn.getAttribute('data-nome');
-    const preco = parseFloat(btn.getAttribute('data-preco'));
-    const span = div.querySelector('span');
-
-    const qtd = contagem[nome] || 0;
-    let texto = `${nome} - R$ ${preco.toFixed(2)}`;
-    if (qtd > 0) texto += ` (${qtd})`;
-
-    span.textContent = texto;
-  });
+function adicionarProdutoSelecionado() {
+  const select = document.getElementById('produtoSelecionado');
+  const nome = select.value;
+  if (!nome) return alert("Selecione um produto.");
+  const preco = parseFloat(select.options[select.selectedIndex].getAttribute('data-preco'));
+  adicionarComandaMesa(nome, preco);
 }
 
-function adicionarItem(nome, preco) {
-  carrinho.push({ nome, preco });
-  atualizarCarrinho();
-  atualizarQuantidadeProdutos();
-}
-
-function removerPrimeiro(nome) {
-  const index = carrinho.findIndex(item => item.nome === nome);
-  if (index !== -1) {
-    carrinho.splice(index, 1);
-    atualizarCarrinho();
-    atualizarQuantidadeProdutos();
+// Atualizar comanda
+function atualizarComanda() {
+  const comandaLista = document.getElementById('comandaLista');
+  comandaLista.innerHTML = '';
+  for (const mesa in comanda) {
+    const divMesa = document.createElement('div');
+    divMesa.innerHTML = `<strong>Mesa ${mesa}:</strong>`;
+    comanda[mesa].forEach((item, i) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.classList.add('comanda-item');
+      itemDiv.innerHTML = `${item.nome} - R$${item.preco.toFixed(2)} 
+        <button onclick="removerItemMesa('${mesa}', ${i})">Remover</button>`;
+      divMesa.appendChild(itemDiv);
+    });
+    comandaLista.appendChild(divMesa);
   }
 }
 
-function atualizarCarrinho() {
-  const itensCarrinho = document.getElementById('itensCarrinho');
-  const totalSpan = document.getElementById('total');
-  const valorRecebidoInput = document.getElementById('valorRecebido');
-  const trocoDiv = document.getElementById('troco');
-
-  itensCarrinho.innerHTML = '';
-  let total = 0;
-  const resumo = {};
-
-  carrinho.forEach(item => {
-    if (!resumo[item.nome]) resumo[item.nome] = { qtd: 0, preco: item.preco };
-    resumo[item.nome].qtd++;
-  });
-
-  for (const nome in resumo) {
-    const { qtd, preco } = resumo[nome];
-    const totalItem = qtd * preco;
-    total += totalItem;
-
-    const div = document.createElement('div');
-    div.classList.add('carrinho-item');
-    div.innerHTML = `
-      <span>${nome} (${qtd}x) - R$ ${totalItem.toFixed(2)}</span>
-      <button onclick="removerPrimeiro('${nome}')" title="Remover um">&minus;</button>
-    `;
-    itensCarrinho.appendChild(div);
-  }
-
-  totalSpan.textContent = `Total: R$ ${total.toFixed(2)}`;
-
-  const valorRecebido = parseFloat(valorRecebidoInput.value);
-  if (!isNaN(valorRecebido) && valorRecebido >= total) {
-    const troco = valorRecebido - total;
-    trocoDiv.textContent = `Troco: R$ ${troco.toFixed(2)}`;
-  } else {
-    trocoDiv.textContent = 'Troco: R$ 0,00';
-  }
+// Remover item
+function removerItemMesa(mesa, index) {
+  estoque[comanda[mesa][index].nome]++;
+  comanda[mesa].splice(index, 1);
+  if (comanda[mesa].length === 0) delete comanda[mesa];
+  atualizarComanda();
+  atualizarEstoque();
 }
 
-function finalizarVenda() {
-  const valorRecebidoInput = document.getElementById('valorRecebido');
-  const nomeCliente = document.getElementById('nomeCliente').value.trim();
-  const valorRecebido = parseFloat(valorRecebidoInput.value);
-  const total = carrinho.reduce((acc, item) => acc + item.preco, 0);
-
-  if (carrinho.length === 0) return alert('O carrinho está vazio!');
-  if (!nomeCliente) return alert('Informe o nome do cliente.');
-  if (isNaN(valorRecebido) || valorRecebido < total) {
-    return alert('Valor recebido é insuficiente.');
-  }
+// Finalizar comanda
+function finalizarComanda() {
+  const mesa = document.getElementById('mesaSelecionada').value;
+  if (!mesa || !comanda[mesa] || comanda[mesa].length === 0) return alert("Mesa sem itens.");
+  const total = comanda[mesa].reduce((acc, i) => acc + i.preco, 0);
+  const cliente = prompt("Nome do cliente da mesa:");
+  const formaPagamento = prompt("Forma de pagamento (Dinheiro, Cartão, PIX):");
+  if (!cliente || !formaPagamento) return alert("Dados incompletos.");
 
   const venda = {
     data: new Date().toISOString(),
-    cliente: nomeCliente,
+    cliente,
+    mesa,
     total,
-    itens: [...carrinho]
+    itens: comanda[mesa],
+    pagamento: formaPagamento
   };
 
-  let vendas = JSON.parse(localStorage.getItem('vendas')) || [];
   vendas.push(venda);
   localStorage.setItem('vendas', JSON.stringify(vendas));
 
-  alert(`Venda finalizada para ${nomeCliente}! Total: R$ ${total.toFixed(2)} | Troco: R$ ${(valorRecebido - total).toFixed(2)}`);
-
-  carrinho = [];
-  document.getElementById('valorRecebido').value = '';
-  document.getElementById('nomeCliente').value = '';
-  atualizarCarrinho();
-  atualizarQuantidadeProdutos();
+  alert(`Conta da Mesa ${mesa} finalizada! Total: R$ ${total.toFixed(2)} | Pagamento: ${formaPagamento}`);
+  delete comanda[mesa];
+  atualizarComanda();
+  atualizarEstoque();
 }
 
-function fecharCaixa() {
-  const senha = prompt('Digite a senha para fechar o caixa:');
-  if (senha !== '1234') return alert('Senha incorreta!');
-
-  const relatorioDiv = document.getElementById('relatorioVendas');
-  const vendas = JSON.parse(localStorage.getItem('vendas')) || [];
-  const hoje = new Date().toISOString().split('T')[0];
-  const vendasHoje = vendas.filter(v => v.data.startsWith(hoje));
-
-  if (vendasHoje.length === 0) {
-    relatorioDiv.innerHTML = '<p>Nenhuma venda registrada hoje.</p>';
-    return;
+// Estoque
+function atualizarEstoque() {
+  const estoqueDiv = document.getElementById('estoqueLista');
+  estoqueDiv.innerHTML = '';
+  for (const nome in estoque) {
+    const div = document.createElement('div');
+    div.classList.add('estoque-item');
+    div.innerHTML = `${nome}: ${estoque[nome]} 
+      <button onclick="reporEstoque('${nome}')">Repor</button>`;
+    estoqueDiv.appendChild(div);
   }
-
-  let html = '<h3>Vendas de Hoje</h3><ul>';
-  let totalDia = 0;
-
-  vendasHoje.forEach((venda, i) => {
-    const hora = new Date(venda.data).toLocaleTimeString();
-    const itens = venda.itens.map(it => `${it.nome} (R$${it.preco.toFixed(2)})`).join(', ');
-    html += `<li><strong>${i + 1}:</strong> ${hora} - <strong>${venda.cliente}</strong> - Total: R$ ${venda.total.toFixed(2)}<br>Itens: ${itens}</li>`;
-    totalDia += venda.total;
-  });
-
-  html += `</ul><p><strong>Total do dia:</strong> R$ ${totalDia.toFixed(2)}</p>`;
-  relatorioDiv.innerHTML = html;
 }
 
-function gerarRelatorioPorData() {
-  const dataSelecionada = document.getElementById('dataBusca').value;
-  const relatorioDiv = document.getElementById('relatorioVendas');
-  const vendas = JSON.parse(localStorage.getItem('vendas')) || [];
+function reporEstoque(nome) {
+  const qtd = parseInt(prompt(`Quantidade para repor de ${nome}:`));
+  if (!isNaN(qtd) && qtd > 0) estoque[nome] += qtd;
+  atualizarEstoque();
+}
 
+// Relatório
+function gerarRelatorioPorData(dataSelecionada) {
+  const relatorioDiv = document.getElementById('relatorioVendas');
   if (!dataSelecionada) {
-    relatorioDiv.innerHTML = '<p>Selecione uma data válida.</p>';
+    relatorioDiv.innerHTML = "<p>Selecione uma data válida.</p>";
     return;
   }
 
-  const vendasSelecionadas = vendas.filter(v => v.data.startsWith(dataSelecionada));
-
-  if (vendasSelecionadas.length === 0) {
-    relatorioDiv.innerHTML = '<p>Nenhuma venda encontrada para esta data.</p>';
+  const filtradas = vendas.filter(v => v.data.startsWith(dataSelecionada));
+  if (filtradas.length === 0) {
+    relatorioDiv.innerHTML = "<p>Nenhuma venda encontrada.</p>";
     return;
   }
 
-  let html = `<h3>Vendas em ${dataSelecionada}</h3><ul>`;
+  let html = "<ul>";
   let totalDia = 0;
 
-  vendasSelecionadas.forEach((venda, i) => {
-    const hora = new Date(venda.data).toLocaleTimeString();
-    const itens = venda.itens.map(it => `${it.nome} (R$${it.preco.toFixed(2)})`).join(', ');
-    html += `<li><strong>${i + 1}:</strong> ${hora} - <strong>${venda.cliente}</strong> - Total: R$ ${venda.total.toFixed(2)}<br>Itens: ${itens}</li>`;
-    totalDia += venda.total;
+  filtradas.forEach((v, i) => {
+    const hora = new Date(v.data).toLocaleTimeString();
+    const itens = v.itens.map(it => `${it.nome} (R$${it.preco.toFixed(2)})`).join(", ");
+    html += `<li><strong>${i + 1}:</strong> ${hora} - Mesa ${v.mesa} - Cliente: ${v.cliente} - Total: R$ ${v.total.toFixed(2)} | Pagamento: ${v.pagamento}<br>Itens: ${itens}</li>`;
+    totalDia += v.total;
   });
 
-  html += `</ul><p><strong>Total do dia:</strong> R$ ${totalDia.toFixed(2)}</p>`;
+  html += "</ul>";
+  html += `<p><strong>Total do dia:</strong> R$ ${totalDia.toFixed(2)}</p>`;
   relatorioDiv.innerHTML = html;
 }
 
 function apagarCaixaPorData() {
   const dataSelecionada = document.getElementById('dataBusca').value;
-  if (!dataSelecionada) return alert('Selecione uma data para apagar.');
-
-  const senha = prompt('Digite a senha para apagar as vendas:');
-  if (senha !== '1234') {
-    alert('Senha incorreta!');
-    return;
-  }
-
-  let vendas = JSON.parse(localStorage.getItem('vendas')) || [];
-  const vendasRestantes = vendas.filter(v => !v.data.startsWith(dataSelecionada));
-
-  if (vendas.length === vendasRestantes.length) {
-    alert('Nenhuma venda encontrada para essa data.');
-    return;
-  }
-
-  localStorage.setItem('vendas', JSON.stringify(vendasRestantes));
-  alert(`Vendas do dia ${dataSelecionada} apagadas com sucesso!`);
-  gerarRelatorioPorData();
+  if (!dataSelecionada) return alert("Selecione uma data para apagar.");
+  const senha = prompt("Digite a senha para apagar as vendas:");
+  if (senha !== "1234") return alert("Senha incorreta!");
+  vendas = vendas.filter(v => !v.data.startsWith(dataSelecionada));
+  localStorage.setItem('vendas', JSON.stringify(vendas));
+  alert(`Vendas do dia ${dataSelecionada} apagadas.`);
+  gerarRelatorioPorData(dataSelecionada);
 }
 
-// Navegação entre abas
+// Fechamento de Caixa
+function exibirFechamentoCaixa() {
+  const div = document.getElementById('fechamentoCaixa');
+  if (vendas.length === 0) {
+    div.innerHTML = "<p>Nenhuma venda registrada.</p>";
+    return;
+  }
+
+  let total = 0;
+  let porForma = {};
+
+  vendas.forEach(v => {
+    total += v.total;
+    porForma[v.pagamento] = (porForma[v.pagamento] || 0) + v.total;
+  });
+
+  let html = `<p><strong>Total geral:</strong> R$ ${total.toFixed(2)}</p><ul>`;
+  for (const forma in porForma) {
+    html += `<li>${forma}: R$ ${porForma[forma].toFixed(2)}</li>`;
+  }
+  html += "</ul>";
+
+  div.innerHTML = html;
+}
+
+function fecharCaixa() {
+  const senha = prompt("Digite a senha para fechar o caixa:");
+  if (senha !== "1234") return alert("Senha incorreta!");
+  if (confirm("Deseja realmente zerar o caixa?")) {
+    vendas = [];
+    localStorage.removeItem('vendas');
+    alert("Caixa zerado com sucesso.");
+    exibirFechamentoCaixa();
+  }
+}
+
+// Navegação
 document.querySelectorAll('.menu-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-
-    document.querySelectorAll('.sessao').forEach(sec => sec.classList.remove('ativa'));
-    document.getElementById(btn.getAttribute('data-target')).classList.add('ativa');
-
-    if (window.innerWidth <= 768) {
-      document.querySelector('.menu-list').classList.remove('mostrar');
-    }
+    document.querySelectorAll('.sessao').forEach(s => s.classList.remove('ativa'));
+    document.getElementById(btn.dataset.target).classList.add('ativa');
+    if (btn.dataset.target === "caixa") exibirFechamentoCaixa();
+    if (window.innerWidth <= 768) document.querySelector('.menu-list').classList.remove('mostrar');
   });
 });
 
-// Toggle menu mobile
 document.getElementById('btnToggle').addEventListener('click', () => {
   document.querySelector('.menu-list').classList.toggle('mostrar');
 });
 
-// Atualiza troco quando digita
-document.getElementById('valorRecebido').addEventListener('input', atualizarCarrinho);
-
-// Ao iniciar
+// Inicializar
 window.onload = () => {
-  atualizarQuantidadeProdutos();
-  atualizarCarrinho();
+  atualizarEstoque();
+  atualizarComanda();
 };
